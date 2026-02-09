@@ -360,7 +360,7 @@ void KeyZipWindow::onCentralStackedChanged(int index)
 void KeyZipWindow::onItemSelectionChanged()
 {
 	auto items = m_treeWidget->selectedItems();
-	bool bHasSelection = items.isEmpty();
+	bool bHasSelection = !items.isEmpty();
 	m_actExtractSelect->setEnabled(bHasSelection);
 	m_actDelete->setEnabled(bHasSelection);
 
