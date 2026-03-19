@@ -1,4 +1,4 @@
-﻿#include "keyzipwindow.h"
+#include "keyzipwindow.h"
 #include "archivetreewidget.h"
 #include "archivetreewidgetitem.h"
 #include "archiveparser.h"
@@ -256,7 +256,7 @@ void KeyZipWindow::startArchiveExtractor(const QString& archivePath, const QStri
 {
 	m_archiveExtractor.reset(new ArchiveExtractor());
 	connect(m_archiveExtractor.data(), &ArchiveExtractor::requirePassword, this, &KeyZipWindow::onRequirePassword, Qt::BlockingQueuedConnection);
-	connect(m_archiveExtractor.data(), &ArchiveExtractor::updateProgress, this, &KeyZipWindow::onUpdateExtractProgress, Qt::BlockingQueuedConnection);
+	connect(m_archiveExtractor.data(), &ArchiveExtractor::updateProgress, this, &KeyZipWindow::onUpdateExtractProgress, Qt::QueuedConnection);
 	connect(m_archiveExtractor.data(), &ArchiveExtractor::extractFailed, this, &KeyZipWindow::onExtractFailed);
 	connect(m_archiveExtractor.data(), &ArchiveExtractor::extractSucceed, this, &KeyZipWindow::onExtractSucceed);
 	connect(m_archiveExtractor.data(), &ArchiveExtractor::extractCanceled, this, &KeyZipWindow::onExtractCanceled);

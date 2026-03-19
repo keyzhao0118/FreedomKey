@@ -1,4 +1,4 @@
-﻿#include "archiveopencallback.h"
+#include "archiveopencallback.h"
 
 STDMETHODIMP ArchiveOpenCallBack::SetTotal(const UInt64* files, const UInt64* bytes)
 {
@@ -15,8 +15,13 @@ STDMETHODIMP ArchiveOpenCallBack::CryptoGetTextPassword(BSTR* password)
 	if (!password)
 		return E_INVALIDARG;
 
+	if (!m_password.isEmpty())
+	{
+		*password = SysAllocString(reinterpret_cast<const OLECHAR*>(m_password.utf16()));
+		return S_OK;
+	}
+
 	bool bCancel = false;
-	m_password.clear();
 	emit requirePassword(bCancel, m_password);
 
 	if (bCancel || m_password.isEmpty())

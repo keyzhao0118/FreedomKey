@@ -1,4 +1,4 @@
-﻿cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.20)
 
 project(KeyZip
 	LANGUAGES CXX
@@ -42,6 +42,15 @@ add_executable(KeyZip WIN32
 	archiveopencallback.cpp
 	archiveextractcallback.cpp
 	archiveextractcallback.h
+
+	writebufferqueue.h
+	writebufferqueue.cpp
+	asyncoutstreamwrapper.h
+	asyncoutstreamwrapper.cpp
+	filewriterthread.h
+	filewriterthread.cpp
+	extractworker.h
+	extractworker.cpp
 )
 
 target_link_libraries(KeyZip

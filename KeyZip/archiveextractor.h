@@ -1,6 +1,10 @@
-﻿#pragma once
+#pragma once
 
 #include <QThread>
+#include <QVector>
+#include <QAtomicInteger>
+
+struct IInArchive;
 
 class ArchiveExtractor : public QThread
 {
@@ -20,14 +24,14 @@ signals:
 	void extractSucceed();
 	void extractCanceled();
 
-
 protected:
 	void run() override;
 
-private slots:
-	void onUpdateProgress(quint64 completed, quint64 total, bool& bIsInterruption);
-
 private:
+	bool detectSolid(IInArchive* archive);
+	void collectFileIndices(IInArchive* archive, bool isSolid,
+		QVector<quint32>& outIndices, quint64& outTotalSize);
+
 	QString m_archivePath;
 	QString m_entryPath;
 	QString m_destDirPath;

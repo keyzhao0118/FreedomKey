@@ -1,21 +1,25 @@
-﻿#pragma once
+#pragma once
 
-#include <QObject>
 #include <7zip/Archive/IArchive.h>
 #include <7zip/IPassword.h>
 #include <Common/MyCom.h>
+#include <QString>
+#include <QAtomicInteger>
+
+class FileWriterThread;
+class WriteBufferQueue;
 
 class ArchiveExtractCallBack
-	: public QObject
-	, public IArchiveExtractCallback
+	: public IArchiveExtractCallback
 	, public ICryptoGetTextPassword
 	, public CMyUnknownImp
 {
-	Q_OBJECT
 	Z7_COM_UNKNOWN_IMP_2(IArchiveExtractCallback, ICryptoGetTextPassword)
 
 public:
-	void init(IInArchive* archive, const QString& entryPath, const QString& destDirPath, const QString& password);
+	void init(IInArchive* archive, const QString& entryPath, const QString& destDirPath,
+		const QString& password, FileWriterThread* writerThread,
+		QAtomicInteger<quint64>* progressCounter, QAtomicInt* interruptionFlag);
 
 	// IArchiveExtractCallback
 	STDMETHOD(SetTotal)(const UInt64 size) override;
@@ -27,23 +31,19 @@ public:
 	// ICryptoGetTextPassword
 	STDMETHOD(CryptoGetTextPassword)(BSTR* password) override;
 
-signals:
-	void requirePassword(bool& bCancel, QString& password);
-	void updateProgress(quint64 completed, quint64 total, bool& bIsInterruption);
-
 private:
-	quint64 m_totalSize = 0;
-	quint64 m_completedSize = 0;
-
 	CMyComPtr<IInArchive> m_archive;
 	QString m_entryPath;
 	QString m_destDirPath;
 	QString m_password;
 
-	// state for current item
-	UInt32 m_currentIndex = (UInt32)-1;
+	FileWriterThread* m_writerThread = nullptr;
+	WriteBufferQueue* m_currentBuffer = nullptr;
+	QAtomicInteger<quint64>* m_progressCounter = nullptr;
+	QAtomicInt* m_interruptionFlag = nullptr;
+
+	UInt32 m_currentIndex = static_cast<UInt32>(-1);
 	QString m_currentFullPath;
 	bool m_currentIsDir = false;
 	bool m_bSkipCurrent = false;
 };
-

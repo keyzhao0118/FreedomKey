@@ -1,36 +1,38 @@
-﻿#include "archiveextractcallback.h"
-#include "outstreamwrapper.h"
+#include "archiveextractcallback.h"
+#include "asyncoutstreamwrapper.h"
+#include "writebufferqueue.h"
+#include "filewriterthread.h"
 #include "commonhelper.h"
 #include <QDir>
 #include <QFileInfo>
-#include <QDebug>
 
-void ArchiveExtractCallBack::init(IInArchive* archive, const QString& entryPath, const QString& destDirPath, const QString& password)
+void ArchiveExtractCallBack::init(IInArchive* archive, const QString& entryPath, const QString& destDirPath,
+	const QString& password, FileWriterThread* writerThread,
+	QAtomicInteger<quint64>* progressCounter, QAtomicInt* interruptionFlag)
 {
 	m_archive = archive;
 	m_entryPath = QDir::toNativeSeparators(entryPath);
 	m_destDirPath = QDir::toNativeSeparators(destDirPath);
 	m_password = password;
+	m_writerThread = writerThread;
+	m_progressCounter = progressCounter;
+	m_interruptionFlag = interruptionFlag;
 }
 
 STDMETHODIMP ArchiveExtractCallBack::SetTotal(const UInt64 size)
 {
-	m_totalSize = static_cast<quint64>(size);
-	CommonHelper::LogKeyZipDebugMsg("ArchiveExtractCallBack: Total size to extract: " + QString::number(m_totalSize));
+	CommonHelper::LogKeyZipDebugMsg("ArchiveExtractCallBack: Total size to extract: " + QString::number(size));
 	return S_OK;
 }
 
 STDMETHODIMP ArchiveExtractCallBack::SetCompleted(const UInt64* completedSize)
 {
-	if (completedSize)
-	{
-		m_completedSize = static_cast<quint64>(*completedSize);
-		CommonHelper::LogKeyZipDebugMsg("ArchiveExtractCallBack: Completed size: " + QString::number(m_completedSize));
-		bool bIsInterruption = false;
-		emit updateProgress(m_completedSize, m_totalSize, bIsInterruption);
-		if (bIsInterruption)
-			return E_ABORT;
-	}
+	if (completedSize && m_progressCounter)
+		m_progressCounter->storeRelease(static_cast<quint64>(*completedSize));
+
+	if (m_interruptionFlag && m_interruptionFlag->loadAcquire())
+		return E_ABORT;
+
 	return S_OK;
 }
 
@@ -58,6 +60,8 @@ STDMETHODIMP ArchiveExtractCallBack::GetStream(UInt32 index, ISequentialOutStrea
 		if (!path.startsWith(m_entryPath))
 		{
 			m_bSkipCurrent = true;
+			PropVariantClear(&propPath);
+			PropVariantClear(&propIsDir);
 			return S_OK;
 		}
 
@@ -65,6 +69,8 @@ STDMETHODIMP ArchiveExtractCallBack::GetStream(UInt32 index, ISequentialOutStrea
 		if (!relativePath.isEmpty() && !relativePath.startsWith(QDir::separator()))
 		{
 			m_bSkipCurrent = true;
+			PropVariantClear(&propPath);
+			PropVariantClear(&propIsDir);
 			return S_OK;
 		}
 
@@ -72,7 +78,7 @@ STDMETHODIMP ArchiveExtractCallBack::GetStream(UInt32 index, ISequentialOutStrea
 		m_currentFullPath = m_destDirPath + QDir::separator() + path.mid(pos);
 	}
 	m_currentIsDir = propIsDir.boolVal != VARIANT_FALSE;
-	
+
 	PropVariantClear(&propPath);
 	PropVariantClear(&propIsDir);
 
@@ -90,13 +96,37 @@ STDMETHODIMP ArchiveExtractCallBack::GetStream(UInt32 index, ISequentialOutStrea
 		return S_OK;
 	}
 
-	OutStreamWrapper* outStreamSpec = new OutStreamWrapper(m_currentFullPath);
-	CMyComPtr<ISequentialOutStream> sequentialOutStream(outStreamSpec);
-	if (!outStreamSpec->isOpen())
-	{
-		m_bSkipCurrent = true;
-		return S_OK;
-	}
+	// Pre-fetch file metadata for the writer thread
+	FileMetadata meta;
+	meta.isDir = false;
+
+	PROPVARIANT propCTime;	PropVariantInit(&propCTime);
+	PROPVARIANT propATime;	PropVariantInit(&propATime);
+	PROPVARIANT propMTime;	PropVariantInit(&propMTime);
+	PROPVARIANT propAttrib;	PropVariantInit(&propAttrib);
+
+	m_archive->GetProperty(index, kpidCTime, &propCTime);
+	m_archive->GetProperty(index, kpidATime, &propATime);
+	m_archive->GetProperty(index, kpidMTime, &propMTime);
+	m_archive->GetProperty(index, kpidAttrib, &propAttrib);
+
+	if (propCTime.vt == VT_FILETIME)	{ meta.ctime = propCTime.filetime; meta.hasTime = true; }
+	if (propATime.vt == VT_FILETIME)	{ meta.atime = propATime.filetime; meta.hasTime = true; }
+	if (propMTime.vt == VT_FILETIME)	{ meta.mtime = propMTime.filetime; meta.hasTime = true; }
+	if (propAttrib.vt == VT_UI4)		{ meta.attributes = propAttrib.ulVal; meta.hasAttributes = true; }
+
+	PropVariantClear(&propCTime);
+	PropVariantClear(&propATime);
+	PropVariantClear(&propMTime);
+	PropVariantClear(&propAttrib);
+
+	// Create async IO pipeline: buffer queue + async out stream + writer task
+	m_currentBuffer = new WriteBufferQueue();
+
+	m_writerThread->startWriteFile(m_currentBuffer, m_currentFullPath, meta);
+
+	AsyncOutStreamWrapper* asyncStreamSpec = new AsyncOutStreamWrapper(m_currentBuffer);
+	CMyComPtr<ISequentialOutStream> sequentialOutStream(asyncStreamSpec);
 
 	*outStream = sequentialOutStream.Detach();
 	return S_OK;
@@ -109,45 +139,14 @@ STDMETHODIMP ArchiveExtractCallBack::PrepareOperation(Int32 askExtractMode)
 
 STDMETHODIMP ArchiveExtractCallBack::SetOperationResult(Int32 opRes)
 {
-	// 恢复文件/目录的时间戳与属性（参照 7-Zip 示例做法）
-	if (opRes != NArchive::NExtract::NOperationResult::kOK || m_bSkipCurrent)
+	if (m_bSkipCurrent || !m_currentBuffer)
 		return S_OK;
 
-	// 获取时间与属性
-	PROPVARIANT propCTime;	PropVariantInit(&propCTime);
-	PROPVARIANT propATime;	PropVariantInit(&propATime);
-	PROPVARIANT propMTime;	PropVariantInit(&propMTime);
-	PROPVARIANT propAttrib;	PropVariantInit(&propAttrib);
+	m_currentBuffer->markFinished();
+	m_writerThread->waitForCurrentFile();
 
-	m_archive->GetProperty(m_currentIndex, kpidCTime, &propCTime);
-	m_archive->GetProperty(m_currentIndex, kpidATime, &propATime);
-	m_archive->GetProperty(m_currentIndex, kpidMTime, &propMTime);
-	m_archive->GetProperty(m_currentIndex, kpidAttrib, &propAttrib);
-
-	// 打开句柄用于设置时间戳
-	DWORD flags = m_currentIsDir ? FILE_FLAG_BACKUP_SEMANTICS : 0;
-	HANDLE h = CreateFileW(reinterpret_cast<LPCWSTR>(m_currentFullPath.utf16()),
-		GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-		nullptr, OPEN_EXISTING, flags, nullptr);
-	if (h != INVALID_HANDLE_VALUE)
-	{
-		const FILETIME* pCT = (propCTime.vt == VT_FILETIME) ? &propCTime.filetime : nullptr;
-		const FILETIME* pAT = (propATime.vt == VT_FILETIME) ? &propATime.filetime : nullptr;
-		const FILETIME* pMT = (propMTime.vt == VT_FILETIME) ? &propMTime.filetime : nullptr;
-		SetFileTime(h, pCT, pAT, pMT);
-		CloseHandle(h);
-	}
-
-	if (propAttrib.vt == VT_UI4)
-	{
-		DWORD attrib = propAttrib.ulVal;
-		SetFileAttributesW(reinterpret_cast<LPCWSTR>(m_currentFullPath.utf16()), attrib);
-	}
-
-	PropVariantClear(&propCTime);
-	PropVariantClear(&propATime);
-	PropVariantClear(&propMTime);
-	PropVariantClear(&propAttrib);
+	delete m_currentBuffer;
+	m_currentBuffer = nullptr;
 
 	return S_OK;
 }
@@ -158,13 +157,7 @@ STDMETHODIMP ArchiveExtractCallBack::CryptoGetTextPassword(BSTR* password)
 		return E_INVALIDARG;
 
 	if (m_password.isEmpty())
-	{
-		bool bCancel = false;
-		emit requirePassword(bCancel, m_password);
-
-		if (bCancel || m_password.isEmpty())
-			return E_ABORT;
-	}
+		return E_ABORT;
 
 	*password = SysAllocString(reinterpret_cast<const OLECHAR*>(m_password.utf16()));
 	return S_OK;
