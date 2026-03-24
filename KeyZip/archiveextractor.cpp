@@ -84,7 +84,7 @@ void ArchiveExtractor::run()
 	}
 	else
 	{
-		workerCount = qMin(5, fileIndices.size());
+		workerCount = qMin(1, fileIndices.size());
 		workerCount = qMax(1, workerCount);
 	}
 

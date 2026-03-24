@@ -1,8 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(KeyZip
-	LANGUAGES CXX
-)
+project(KeyZip LANGUAGES CXX)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)

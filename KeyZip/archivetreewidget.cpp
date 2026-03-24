@@ -1,4 +1,4 @@
-﻿#include "archivetreewidget.h"
+#include "archivetreewidget.h"
 #include "archivetreewidgetitem.h"
 #include "commonhelper.h"
 #include <QScrollBar>

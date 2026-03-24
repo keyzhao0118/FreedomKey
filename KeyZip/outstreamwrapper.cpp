@@ -1,4 +1,4 @@
-﻿#include "outstreamwrapper.h"
+#include "outstreamwrapper.h"
 
 OutStreamWrapper::OutStreamWrapper(const QString& filePath)
 	: m_file(filePath)

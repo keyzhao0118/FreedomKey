@@ -1,4 +1,4 @@
-﻿#include "archiveparser.h"
+#include "archiveparser.h"
 #include "archivetree.h"
 #include "commonhelper.h"
 #include "archiveopencallback.h"

@@ -1,4 +1,4 @@
-﻿#include "commonhelper.h"
+#include "commonhelper.h"
 #include <shellapi.h>
 #include <QDebug>
 #include <QFileIconProvider>
