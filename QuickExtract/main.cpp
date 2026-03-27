@@ -1,11 +1,12 @@
 #include <QApplication>
-#include <QWidget>
+#include "mainwindow.h"
 
 int main(int argc, char* argv[])
 {
 	QApplication app(argc, argv);
+	QApplication::setQuitOnLastWindowClosed(false);
 
-	QWidget w;
+	MainWindow w;
 	w.show();
 
 	return app.exec();

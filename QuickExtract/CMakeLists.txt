@@ -10,7 +10,32 @@ find_package(Qt5 COMPONENTS Widgets REQUIRED)
 find_package(7zip CONFIG REQUIRED)
 
 add_executable(QuickExtract WIN32
+	guiddef.cpp
 	main.cpp
+
+	mainwindow.h
+	mainwindow.cpp
+
+	archivehelper.h
+	archivehelper.cpp
+
+	extractengine.h
+	extractengine.cpp
+
+	instreamwrapper.h
+	instreamwrapper.cpp
+	asyncoutstreamwrapper.h
+	asyncoutstreamwrapper.cpp
+
+	writebufferqueue.h
+	writebufferqueue.cpp
+	filewriterthread.h
+	filewriterthread.cpp
+
+	opencallback.h
+	opencallback.cpp
+	extractcallback.h
+	extractcallback.cpp
 )
 
 target_link_libraries(QuickExtract
