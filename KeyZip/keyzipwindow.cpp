@@ -39,7 +39,6 @@ KeyZipWindow::~KeyZipWindow()
 
 void KeyZipWindow::initAction()
 {
-	// 文件动作
 	m_actOpen = new QAction(tr("Open Archive"), this);
 	m_actNew = new QAction(tr("New Archive"), this);
 	m_actExtractAll = new QAction(tr("Extract All"), this);
@@ -48,25 +47,20 @@ void KeyZipWindow::initAction()
 	m_actClose = new QAction(tr("Close Archive"), this);
 	m_actExit = new QAction(tr("Exit"), this);
 
-	// 编辑动作
 	m_actAdd = new QAction(tr("Add Files"), this);
 	m_actDelete = new QAction(tr("Delete Files"), this);
 
-	// 视图动作
 	m_actPreview = new QAction(tr("Preview Panel"), this);
 	m_actPreview->setCheckable(true);
 
-	// 关于动作
 	m_actAbout = new QAction(tr("About"), this);
 
-	// 设置快捷键
 	m_actOpen->setShortcut(QKeySequence::Open);
 	m_actNew->setShortcut(QKeySequence::New);
 	m_actExtractAll->setShortcut(QKeySequence("Ctrl+E"));
 	m_actClose->setShortcut(QKeySequence("Ctrl+W"));
 	m_actExit->setShortcut(QKeySequence("Ctrl+Q"));
 
-	// 初始化可用性
 	m_actExtractAll->setEnabled(false);
 	m_actExtractSelect->setEnabled(false);
 	m_actLocation->setEnabled(false);
@@ -75,7 +69,6 @@ void KeyZipWindow::initAction()
 	m_actDelete->setEnabled(false);
 	m_actPreview->setEnabled(false);
 
-	// 连接动作
 	connect(m_actOpen, &QAction::triggered, this, &KeyZipWindow::onOpenTriggered);
 	connect(m_actNew, &QAction::triggered, this, &KeyZipWindow::onNewTriggered);
 	connect(m_actExtractAll, &QAction::triggered, this, &KeyZipWindow::onExtractAllTriggered);
@@ -93,7 +86,6 @@ void KeyZipWindow::initAction()
 
 void KeyZipWindow::initMenu()
 {
-	// 文件、编辑、视图、帮助菜单
 	QMenu* fileMenu = menuBar()->addMenu(tr("&File(F)"));
 	QMenu* editMenu = menuBar()->addMenu(tr("&Edit(E)"));
 	QMenu* viewMenu = menuBar()->addMenu(tr("&View(V)"));
@@ -192,8 +184,6 @@ void KeyZipWindow::clearOld()
 	setWindowTitle("KeyZip");
 	if (m_treeWidget)
 		m_treeWidget->clear();
-	if (m_previewPanel)
-		;//
 	if (m_archiveInfoLab)
 		m_archiveInfoLab->clear();
 
@@ -344,7 +334,7 @@ void KeyZipWindow::onAboutTriggered()
 
 void KeyZipWindow::onCentralStackedChanged(int index)
 {
-	if (index == 0)// 首页
+	if (index == 0)
 	{
 		m_toolBar->setVisible(false);
 		m_actExtractAll->setEnabled(false);

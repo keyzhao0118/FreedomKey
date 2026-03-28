@@ -26,10 +26,8 @@ void ArchiveTreeWidget::refresh(const ArchiveTreeNode* rootNode)
 	if (!rootNode)
 		return;
 
-	// 添加压缩文件项
 	auto archiveItem = addItem(invisibleRootItem(), rootNode);
 	
-	// 添加顶层项
 	for (const ArchiveTreeNode* childNode : rootNode->m_childNodes)
 		addItem(archiveItem, childNode);
 
@@ -77,7 +75,7 @@ QTreeWidgetItem* ArchiveTreeWidget::addItem(QTreeWidgetItem* parentItem, const A
 	item->setTextAlignment(ArchiveTreeWidgetItem::Column_OriginalSize, Qt::AlignRight| Qt::AlignVCenter);
 	
 	item->setData(ArchiveTreeWidgetItem::Column_Name, Qt::UserRole, QVariant::fromValue<quintptr>(reinterpret_cast<quintptr>(node)));
-	item->setData(ArchiveTreeWidgetItem::Column_Name, Qt::UserRole + 1, false);// 标记子项是否已添加，默认未添加
+	item->setData(ArchiveTreeWidgetItem::Column_Name, Qt::UserRole + 1, false);
 	item->setData(ArchiveTreeWidgetItem::Column_CompressedSize, Qt::UserRole, node->m_bIsDir ? 0 : node->m_compressedSize);
 	item->setData(ArchiveTreeWidgetItem::Column_OriginalSize, Qt::UserRole, node->m_bIsDir ? 0 : node->m_originalSize);
 	item->setData(ArchiveTreeWidgetItem::Column_Type, Qt::UserRole, node->m_bIsDir);
@@ -104,6 +102,6 @@ void ArchiveTreeWidget::loadChildItems(QTreeWidgetItem* item)
 	for (const ArchiveTreeNode* childNode : node->m_childNodes)
 		addItem(item, childNode);
 
-	item->setData(0, Qt::UserRole + 1, true);// 标记子项已添加
+	item->setData(0, Qt::UserRole + 1, true);
 }
 
