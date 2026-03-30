@@ -18,9 +18,5 @@ public:
 	STDMETHOD(Write)(const void* data, UInt32 size, UInt32* processedSize) override;
 
 private:
-	void applyMetadata();
-
-private:
 	QFile m_file;
-	QString m_filePath;
 };

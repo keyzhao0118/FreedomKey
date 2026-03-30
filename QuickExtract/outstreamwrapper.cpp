@@ -1,7 +1,6 @@
 #include "outstreamwrapper.h"
 
 OutStreamWrapper::OutStreamWrapper(const QString& filePath) 
-	: m_filePath(filePath)
 {
 	m_file.setFileName(filePath);
 	m_file.open(QIODevice::WriteOnly);

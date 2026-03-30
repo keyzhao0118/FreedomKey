@@ -3,7 +3,6 @@
 
 #include <QDir>
 #include <QFileInfo>
-#include <QFile>
 
 void ExtractCallback::init(IInArchive* archive, const QString& destDirPath, const QString& password)
 {
@@ -48,12 +47,14 @@ STDMETHODIMP ExtractCallback::GetStream(UInt32 index, ISequentialOutStream** out
 
 	if (currentIsDir)
 	{
-		QDir().mkpath(currentFullPath);
+		if (!QDir().exists(currentFullPath))
+			QDir().mkpath(currentFullPath);
 		return S_OK;
 	}
 
 	const QString parentDir = QFileInfo(currentFullPath).absolutePath();
-	QDir().mkpath(parentDir);
+	if (!QDir().exists(parentDir))
+		QDir().mkpath(parentDir);
 
 	OutStreamWrapper* outStreamSpec = new OutStreamWrapper(currentFullPath);
 	CMyComPtr<ISequentialOutStream> sequentialOutStream(outStreamSpec);
