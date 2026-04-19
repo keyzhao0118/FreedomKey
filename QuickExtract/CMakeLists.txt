@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.20)
 
 project(QuickExtract LANGUAGES CXX)
 
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${PROJECT_NAME}/bin)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${PROJECT_NAME}/bin)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${PROJECT_NAME}/bin)
+
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
@@ -49,14 +53,6 @@ target_link_libraries(QuickExtract
 		7zip::7zip
 )
 
-# 添加此命令以在构建后复制 DLL
-add_custom_command(TARGET QuickExtract POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E copy_if_different
-	"$<TARGET_FILE_DIR:7zip::7zip>/../bin/7zip.dll" # 从 .lib 目录找到 .dll
-	$<TARGET_FILE_DIR:QuickExtract>
-	COMMENT "Copying 7z.dll to output directory"
-)
-
 # 国际化：lupdate 扫描源码更新 .ts，lrelease 编译生成 .qm
 set(TS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/translations)
 set(QM_DIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translations)
@@ -73,3 +69,11 @@ add_custom_target(QuickExtract_translations ALL
 )
 
 add_dependencies(QuickExtract QuickExtract_translations)
+
+# 添加此命令以在构建后复制 DLL
+add_custom_command(TARGET QuickExtract POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different
+	"$<TARGET_FILE_DIR:7zip::7zip>/../bin/7zip.dll" # 从 .lib 目录找到 .dll
+	$<TARGET_FILE_DIR:QuickExtract>
+	COMMENT "Copying 7z.dll to output directory"
+)
