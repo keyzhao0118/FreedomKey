@@ -6,41 +6,41 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-find_package(Qt5 COMPONENTS Widgets REQUIRED)
+find_package(Qt5 COMPONENTS Widgets LinguistTools REQUIRED)
 find_package(7zip CONFIG REQUIRED)
 
 add_executable(QuickExtract WIN32
-	guiddef.cpp
-	main.cpp
+	src/guiddef.cpp
+	src/main.cpp
 
-	mainwindow.h
-	mainwindow.cpp
+	src/mainwindow.h
+	src/mainwindow.cpp
 
-	archivehelper.h
-	archivehelper.cpp
+	src/archivehelper.h
+	src/archivehelper.cpp
 
-	extractengine.h
-	extractengine.cpp
+	src/extractengine.h
+	src/extractengine.cpp
 
-	compressengine.h
-	compressengine.cpp
+	src/compressengine.h
+	src/compressengine.cpp
 
-	instreamwrapper.h
-	instreamwrapper.cpp
-	outstreamwrapper.h
-	outstreamwrapper.cpp
-	compressoutstream.h
-	compressoutstream.cpp
+	src/instreamwrapper.h
+	src/instreamwrapper.cpp
+	src/outstreamwrapper.h
+	src/outstreamwrapper.cpp
+	src/compressoutstream.h
+	src/compressoutstream.cpp
 
-	opencallback.h
-	opencallback.cpp
-	extractcallback.h
-	extractcallback.cpp
-	updatecallback.h
-	updatecallback.cpp
+	src/opencallback.h
+	src/opencallback.cpp
+	src/extractcallback.h
+	src/extractcallback.cpp
+	src/updatecallback.h
+	src/updatecallback.cpp
 
-	compressoptionsdialog.h
-	compressoptionsdialog.cpp
+	src/compressoptionsdialog.h
+	src/compressoptionsdialog.cpp
 )
 
 target_link_libraries(QuickExtract
@@ -56,3 +56,20 @@ add_custom_command(TARGET QuickExtract POST_BUILD
 	$<TARGET_FILE_DIR:QuickExtract>
 	COMMENT "Copying 7z.dll to output directory"
 )
+
+# 国际化：lupdate 扫描源码更新 .ts，lrelease 编译生成 .qm
+set(TS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/translations)
+set(QM_DIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/translations)
+
+add_custom_target(QuickExtract_translations ALL
+	COMMAND ${CMAKE_COMMAND} -E make_directory ${TS_DIR}
+	COMMAND Qt5::lupdate -extensions cpp,h -no-obsolete ${CMAKE_CURRENT_SOURCE_DIR}/src -ts
+		${TS_DIR}/quickextract_zh_CN.ts
+		${TS_DIR}/quickextract_en_US.ts
+	COMMAND ${CMAKE_COMMAND} -E make_directory ${QM_DIR}
+	COMMAND Qt5::lrelease ${TS_DIR}/quickextract_zh_CN.ts -qm ${QM_DIR}/quickextract_zh_CN.qm
+	COMMAND Qt5::lrelease ${TS_DIR}/quickextract_en_US.ts -qm ${QM_DIR}/quickextract_en_US.qm
+	COMMENT "Updating translations and generating .qm files..."
+)
+
+add_dependencies(QuickExtract QuickExtract_translations)
